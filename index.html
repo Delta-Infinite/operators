@@ -1,0 +1,1234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="robots" content="noindex,nofollow" />
+<title>Operator Console — Delta Infinite</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT@9..144,300..900,0..100&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+
+<style>
+  :root {
+    --bg: #0c0e0d;
+    --bg-1: #11141a;
+    --bg-2: #161a20;
+    --line: #1f242c;
+    --line-2: #2a313b;
+    --ink: #e8e6df;
+    --ink-2: #a39e93;
+    --ink-3: #6e6a62;
+    --phosphor: #b6f4c8;
+    --phosphor-dim: #5d8a6c;
+    --amber: #ffb547;
+    --uplink: #6ec1ff;
+    --warn: #ff7a59;
+
+    --serif: "Fraunces", ui-serif, Georgia, serif;
+    --mono:  "JetBrains Mono", ui-monospace, Menlo, monospace;
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: var(--bg); color: var(--ink); }
+  body {
+    font-family: var(--serif);
+    font-feature-settings: "ss01","ss02";
+    line-height: 1.55;
+    min-height: 100vh;
+    overflow-x: hidden;
+    background:
+      radial-gradient(1200px 600px at 50% -10%, #14201b 0%, transparent 60%),
+      radial-gradient(900px 500px at 90% 110%, #1a1410 0%, transparent 55%),
+      var(--bg);
+  }
+
+  /* Subtle film grain */
+  body::after {
+    content: "";
+    position: fixed; inset: 0;
+    pointer-events: none;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0.9 0 0 0 0 0.9 0 0 0 0 0.85 0 0 0 0.06 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+    mix-blend-mode: screen;
+    opacity: 0.5;
+    z-index: 1;
+  }
+
+  /* Star field */
+  .stars { position: fixed; inset: 0; z-index: 0; pointer-events: none; }
+  .stars canvas { width: 100%; height: 100%; display: block; }
+
+  .wrap {
+    position: relative;
+    z-index: 2;
+    max-width: 1180px;
+    margin: 0 auto;
+    padding: 28px 32px 120px;
+  }
+
+  /* Boot overlay */
+  #boot {
+    position: fixed; inset: 0;
+    background: var(--bg);
+    z-index: 50;
+    display: flex; align-items: center; justify-content: center;
+    transition: opacity .6s ease .2s;
+  }
+  #boot.gone { opacity: 0; pointer-events: none; }
+  #boot .term {
+    width: min(560px, 88vw);
+    font-family: var(--mono);
+    font-size: 13px;
+    color: var(--ink-2);
+    letter-spacing: 0.02em;
+  }
+  #boot .term .line { white-space: pre; min-height: 1.4em; }
+  #boot .term .ok { color: var(--phosphor); }
+  #boot .term .caret::after {
+    content: "▍"; color: var(--phosphor); margin-left: 2px;
+    animation: blink 1s steps(1) infinite;
+  }
+  @keyframes blink { 50% { opacity: 0; } }
+
+  /* Header / chrome */
+  header.chrome {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: end;
+    gap: 24px;
+    padding-bottom: 18px;
+    border-bottom: 1px solid var(--line);
+  }
+  .crest {
+    display: flex; align-items: center; gap: 14px;
+    font-family: var(--mono);
+    font-size: 12px;
+    letter-spacing: 0.18em;
+    color: var(--ink-2);
+    text-transform: uppercase;
+  }
+  .crest svg { width: 28px; height: 28px; }
+  .crest .pulse {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--phosphor);
+    box-shadow: 0 0 12px var(--phosphor);
+    animation: pulse 1.6s ease-in-out infinite;
+  }
+  @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: .35; } }
+
+  .meta {
+    text-align: right;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--ink-3);
+    letter-spacing: 0.12em;
+  }
+  .meta .row { display: block; }
+  .meta b { color: var(--ink-2); font-weight: 500; }
+
+  /* Hero */
+  .hero {
+    padding: 72px 0 48px;
+    position: relative;
+  }
+  .hero .tag {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.28em;
+    color: var(--phosphor-dim);
+    text-transform: uppercase;
+    margin-bottom: 18px;
+  }
+  .hero h1 {
+    font-family: var(--serif);
+    font-variation-settings: "opsz" 144, "SOFT" 30;
+    font-weight: 320;
+    font-size: clamp(44px, 8vw, 96px);
+    line-height: 0.95;
+    letter-spacing: -0.02em;
+    margin: 0 0 18px;
+    color: var(--ink);
+  }
+  .hero h1 em {
+    font-style: italic;
+    font-variation-settings: "opsz" 144, "SOFT" 100;
+    color: var(--phosphor);
+  }
+  .hero .lede {
+    max-width: 56ch;
+    font-size: 18px;
+    color: var(--ink-2);
+    margin: 0;
+  }
+  .hero .lede b { color: var(--ink); font-weight: 500; }
+
+  /* Section base */
+  section { padding: 64px 0; border-top: 1px solid var(--line); }
+  section:first-of-type { border-top: 0; }
+
+  .sec-head {
+    display: grid;
+    grid-template-columns: 120px 1fr;
+    gap: 24px;
+    margin-bottom: 32px;
+    align-items: baseline;
+  }
+  .sec-tag {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.22em;
+    color: var(--ink-3);
+    text-transform: uppercase;
+    padding-top: 8px;
+    border-top: 1px solid var(--line-2);
+  }
+  .sec-title {
+    font-family: var(--serif);
+    font-variation-settings: "opsz" 96, "SOFT" 60;
+    font-weight: 360;
+    font-size: clamp(28px, 4.2vw, 44px);
+    letter-spacing: -0.012em;
+    margin: 0;
+    color: var(--ink);
+  }
+  .sec-title em { font-style: italic; color: var(--phosphor); font-variation-settings: "opsz" 96, "SOFT" 100; }
+
+  /* Telemetry strip */
+  .telem {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1px;
+    background: var(--line);
+    border: 1px solid var(--line);
+  }
+  .tcell {
+    background: var(--bg-1);
+    padding: 22px 22px 24px;
+    position: relative;
+  }
+  .tcell .label {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.2em;
+    color: var(--ink-3);
+    text-transform: uppercase;
+    margin-bottom: 14px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .tcell .dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--phosphor); box-shadow: 0 0 8px var(--phosphor);
+  }
+  .tcell.warn .dot { background: var(--amber); box-shadow: 0 0 8px var(--amber); }
+  .tcell .value {
+    font-family: var(--mono);
+    font-weight: 500;
+    font-size: 34px;
+    letter-spacing: -0.02em;
+    color: var(--ink);
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+  }
+  .tcell .unit {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--ink-3);
+    letter-spacing: 0.1em;
+    margin-top: 8px;
+  }
+  @media (max-width: 800px) {
+    .telem { grid-template-columns: repeat(2, 1fr); }
+  }
+
+  /* ID provisioning */
+  .id-grid {
+    display: grid;
+    grid-template-columns: 1fr 1.2fr;
+    gap: 48px;
+    align-items: start;
+  }
+  @media (max-width: 900px) {
+    .id-grid { grid-template-columns: 1fr; }
+    .sec-head { grid-template-columns: 1fr; gap: 8px; }
+  }
+
+  .id-form .field {
+    display: block;
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.18em;
+    color: var(--ink-3);
+    text-transform: uppercase;
+    margin-bottom: 10px;
+  }
+  .id-form input {
+    width: 100%;
+    background: transparent;
+    border: 0;
+    border-bottom: 1px solid var(--line-2);
+    color: var(--ink);
+    font-family: var(--mono);
+    font-size: 22px;
+    padding: 8px 0 12px;
+    letter-spacing: 0.05em;
+    outline: none;
+    text-transform: uppercase;
+    transition: border-color .2s ease;
+  }
+  .id-form input:focus { border-color: var(--phosphor); }
+  .id-form .helper {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--ink-3);
+    margin-top: 14px;
+    letter-spacing: 0.04em;
+  }
+  .id-form .row-btns {
+    display: flex; gap: 10px; margin-top: 24px; flex-wrap: wrap;
+  }
+  .btn {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--ink);
+    background: transparent;
+    border: 1px solid var(--line-2);
+    padding: 12px 18px;
+    cursor: pointer;
+    transition: all .18s ease;
+  }
+  .btn:hover { border-color: var(--phosphor); color: var(--phosphor); }
+  .btn:disabled { opacity: .35; cursor: not-allowed; }
+  .btn.primary {
+    border-color: var(--phosphor);
+    color: var(--phosphor);
+  }
+  .btn.primary:hover {
+    background: var(--phosphor);
+    color: var(--bg);
+  }
+
+  /* ID Card */
+  .card-stage {
+    perspective: 1400px;
+  }
+  .id-card {
+    aspect-ratio: 1.586 / 1; /* credit card ratio */
+    width: 100%;
+    background:
+      linear-gradient(135deg, #14171c 0%, #0e1114 60%, #11161a 100%);
+    border: 1px solid var(--line-2);
+    border-radius: 4px;
+    padding: 26px 28px;
+    position: relative;
+    box-shadow:
+      0 1px 0 #2a313b inset,
+      0 30px 60px -30px rgba(0,0,0,0.8),
+      0 0 0 1px rgba(182, 244, 200, 0.05);
+    overflow: hidden;
+    transform-style: preserve-3d;
+    transition: transform .8s cubic-bezier(.2,.7,.2,1);
+  }
+  .id-card::before {
+    content: "";
+    position: absolute; inset: 0;
+    background:
+      repeating-linear-gradient(0deg, transparent 0 3px, rgba(255,255,255,0.012) 3px 4px),
+      radial-gradient(600px 200px at 90% 0%, rgba(182,244,200,0.08), transparent 70%);
+    pointer-events: none;
+  }
+  .id-card .header {
+    display: flex; justify-content: space-between; align-items: center;
+    font-family: var(--mono);
+    font-size: 9px;
+    letter-spacing: 0.24em;
+    color: var(--ink-3);
+    text-transform: uppercase;
+  }
+  .id-card .title {
+    font-family: var(--serif);
+    font-variation-settings: "opsz" 144, "SOFT" 30;
+    font-weight: 320;
+    font-size: clamp(22px, 3.4vw, 30px);
+    letter-spacing: -0.01em;
+    color: var(--ink);
+    margin: 18px 0 4px;
+    line-height: 1.05;
+  }
+  .id-card .title em {
+    font-style: italic;
+    color: var(--phosphor);
+    font-variation-settings: "opsz" 144, "SOFT" 100;
+  }
+  .id-card .callsign-line {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--ink-3);
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    margin-bottom: 4px;
+  }
+  .id-card .callsign {
+    font-family: var(--mono);
+    font-size: clamp(20px, 3vw, 26px);
+    color: var(--phosphor);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    line-height: 1.1;
+    word-break: break-word;
+  }
+  .id-card .footer {
+    position: absolute;
+    left: 28px; right: 28px; bottom: 22px;
+    display: flex; justify-content: space-between; align-items: end;
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.16em;
+    color: var(--ink-3);
+    text-transform: uppercase;
+  }
+  .id-card .serial {
+    color: var(--ink);
+    font-size: 12px;
+    letter-spacing: 0.22em;
+  }
+  .id-card .glyph {
+    position: absolute;
+    right: -40px; bottom: -40px;
+    width: 220px; height: 220px;
+    opacity: 0.06;
+    pointer-events: none;
+  }
+
+  /* Mission status */
+  .ledger {
+    border-top: 1px solid var(--line);
+  }
+  .ledger .row {
+    display: grid;
+    grid-template-columns: 130px 80px 1fr;
+    gap: 24px;
+    padding: 18px 0;
+    border-bottom: 1px solid var(--line);
+    align-items: baseline;
+  }
+  .ledger .date {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--ink-3);
+    letter-spacing: 0.14em;
+  }
+  .ledger .status {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+  }
+  .ledger .status.done { color: var(--phosphor); }
+  .ledger .status.live { color: var(--amber); }
+  .ledger .status.queue { color: var(--ink-3); }
+  .ledger .body { font-family: var(--serif); font-size: 17px; color: var(--ink); }
+  .ledger .body small { display: block; color: var(--ink-2); font-size: 14px; margin-top: 4px; }
+  @media (max-width: 700px) {
+    .ledger .row { grid-template-columns: 1fr; gap: 4px; padding: 14px 0; }
+  }
+
+  /* Manifesto */
+  .pact {
+    max-width: 64ch;
+    margin: 0 auto;
+    font-size: 20px;
+    line-height: 1.55;
+    color: var(--ink);
+  }
+  .pact p { margin: 0 0 1.1em; }
+  .pact p.lead::first-letter {
+    font-family: var(--serif);
+    font-variation-settings: "opsz" 144, "SOFT" 0;
+    font-weight: 360;
+    float: left;
+    font-size: 5.4em;
+    line-height: 0.85;
+    margin: 0.05em 0.12em 0 -0.05em;
+    color: var(--phosphor);
+  }
+  .pact .sigline {
+    margin-top: 2.5em;
+    border-top: 1px solid var(--line-2);
+    padding-top: 1.4em;
+    font-family: var(--mono);
+    font-size: 12px;
+    letter-spacing: 0.18em;
+    color: var(--ink-3);
+    text-transform: uppercase;
+    display: flex; justify-content: space-between;
+  }
+
+  /* Footer */
+  footer.foot {
+    margin-top: 80px;
+    padding-top: 36px;
+    border-top: 1px solid var(--line);
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 16px;
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.14em;
+    color: var(--ink-3);
+    text-transform: uppercase;
+  }
+  footer.foot a { color: var(--ink-2); text-decoration: none; border-bottom: 1px solid transparent; }
+  footer.foot a:hover { color: var(--phosphor); border-bottom-color: var(--phosphor); }
+
+  /* Toast */
+  .toast {
+    position: fixed;
+    left: 50%; bottom: 32px;
+    transform: translateX(-50%) translateY(20px);
+    background: var(--bg-2);
+    border: 1px solid var(--line-2);
+    color: var(--ink);
+    padding: 12px 18px;
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    opacity: 0;
+    transition: opacity .25s ease, transform .25s ease;
+    z-index: 60;
+    pointer-events: none;
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  /* Reveal animation */
+  .reveal { opacity: 0; transform: translateY(14px); transition: opacity .9s ease, transform .9s ease; }
+  .reveal.in { opacity: 1; transform: none; }
+
+  /* Easter-egg modal */
+  .qmodal {
+    position: fixed; inset: 0;
+    background: rgba(8,10,12,0.85);
+    backdrop-filter: blur(6px);
+    display: none;
+    align-items: center; justify-content: center;
+    z-index: 80;
+  }
+  .qmodal.show { display: flex; }
+  .qmodal .panel {
+    background: var(--bg-1);
+    border: 1px solid var(--line-2);
+    width: min(560px, 90vw);
+    padding: 28px 30px;
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--ink-2);
+    letter-spacing: 0.06em;
+    line-height: 1.7;
+  }
+  .qmodal .panel h3 {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.28em;
+    color: var(--phosphor);
+    text-transform: uppercase;
+    margin: 0 0 18px;
+  }
+  .qmodal .panel button {
+    margin-top: 18px;
+  }
+
+  ::selection { background: var(--phosphor); color: var(--bg); }
+
+</style>
+</head>
+<body>
+
+<div class="stars"><canvas id="stars"></canvas></div>
+
+<!-- Boot sequence -->
+<div id="boot" aria-hidden="true">
+  <div class="term">
+    <div class="line" id="bl1"></div>
+    <div class="line" id="bl2"></div>
+    <div class="line" id="bl3"></div>
+    <div class="line" id="bl4"></div>
+    <div class="line caret" id="bl5"></div>
+  </div>
+</div>
+
+<div class="wrap">
+
+  <header class="chrome">
+    <div class="crest">
+      <svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <path d="M16 2 L29 27 L3 27 Z" stroke="currentColor" stroke-width="1" />
+        <path d="M16 8 L24 24 L8 24 Z" stroke="var(--phosphor)" stroke-width="1" opacity="0.85" />
+        <circle cx="16" cy="20" r="2" fill="var(--phosphor)"/>
+      </svg>
+      <span>Delta Infinite &nbsp;·&nbsp; Operator Console</span>
+      <span class="pulse" aria-hidden="true"></span>
+    </div>
+    <div class="meta">
+      <span class="row"><b>CHANNEL</b> &nbsp; CAPTURE-LADDER · CLEARED</span>
+      <span class="row"><b>UTC</b> &nbsp; <span id="utc">--:--:--</span></span>
+    </div>
+  </header>
+
+  <!-- HERO -->
+  <section class="hero">
+    <div class="tag">Authenticated · Founding Operator Access</div>
+    <h1 class="reveal">You're not a customer.<br/>You're <em>crew</em>.</h1>
+    <p class="lede reveal">
+      You believed in this before there was anything to believe in. Before the
+      LOIs, before the foam was in vacuum, before the deck even had a Series A
+      slide to skip. <b>This console is for you.</b> It will grow as the company
+      does. Welcome to the inside of the problem.
+    </p>
+  </section>
+
+  <!-- TELEMETRY -->
+  <section>
+    <div class="sec-head">
+      <div class="sec-tag">§ 01 / Telemetry</div>
+      <h2 class="sec-title">The problem, <em>in real time.</em></h2>
+    </div>
+
+    <div class="telem">
+      <div class="tcell">
+        <div class="label"><span class="dot"></span>Cataloged LEO Objects</div>
+        <div class="value" data-counter data-target="36842" data-tick="1">0</div>
+        <div class="unit">tracked &gt; 10 cm · ticking</div>
+      </div>
+      <div class="tcell warn">
+        <div class="label"><span class="dot"></span>Uncontrolled Mass · LEO</div>
+        <div class="value" data-counter data-target="9400" data-suffix=" T">0</div>
+        <div class="unit">metric tons, derelict</div>
+      </div>
+      <div class="tcell">
+        <div class="label"><span class="dot"></span>Days Since Founding</div>
+        <div class="value" id="daysSinceFounded">0</div>
+        <div class="unit">since 2022 · still here</div>
+      </div>
+      <div class="tcell">
+        <div class="label"><span class="dot"></span>Technology Readiness</div>
+        <div class="value">TRL&nbsp;3<span style="color:var(--ink-3);font-size:18px;">&nbsp;→&nbsp;4</span></div>
+        <div class="unit">vacuum + thermal in flight</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ID PROVISIONING -->
+  <section>
+    <div class="sec-head">
+      <div class="sec-tag">§ 02 / Credentials</div>
+      <h2 class="sec-title">Provision your <em>Operator ID.</em></h2>
+    </div>
+
+    <div class="id-grid">
+      <div class="id-form">
+        <label class="field" for="callsign">Choose your callsign</label>
+        <input id="callsign" type="text" maxlength="18" autocomplete="off" spellcheck="false" placeholder="e.g. CASSINI" />
+        <div class="helper">
+          One callsign per Operator. Letters, numbers, hyphens — up to 18 characters.
+          Your serial is generated from your callsign and the day of provisioning.
+          Your record is stored locally to this device.
+        </div>
+        <div class="row-btns">
+          <button class="btn primary" id="provision">Provision</button>
+          <button class="btn" id="download" disabled>Download Card · PNG</button>
+          <button class="btn" id="reset" disabled>Reset</button>
+        </div>
+      </div>
+
+      <div class="card-stage">
+        <div class="id-card" id="card">
+          <div class="header">
+            <span>Delta Infinite</span>
+            <span>Founding Operator · Class of 2026</span>
+          </div>
+          <div class="title">Founding <em>Operator.</em></div>
+          <div class="callsign-line">Callsign</div>
+          <div class="callsign" id="card-callsign">— — —</div>
+          <div class="footer">
+            <span>Provisioned <span id="card-date">— —</span></span>
+            <span class="serial" id="card-serial">DI-FO-————.———-——————</span>
+          </div>
+          <svg class="glyph" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="50" cy="50" r="48" stroke="var(--phosphor)" stroke-width="0.5"/>
+            <circle cx="50" cy="50" r="32" stroke="var(--phosphor)" stroke-width="0.5"/>
+            <path d="M50 2 L96 80 L4 80 Z" stroke="var(--phosphor)" stroke-width="0.5"/>
+            <circle cx="50" cy="62" r="3" fill="var(--phosphor)"/>
+          </svg>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- MISSION STATUS -->
+  <section>
+    <div class="sec-head">
+      <div class="sec-tag">§ 03 / Status Board</div>
+      <h2 class="sec-title">What we're <em>actually doing</em> right now.</h2>
+    </div>
+
+    <!-- EDIT THIS BLOCK to update the status board -->
+    <div class="ledger" id="ledger">
+      <div class="row">
+        <div class="date">2026.04.29</div>
+        <div class="status done">Logged</div>
+        <div class="body">
+          Lockheed Martin path opened.
+          <small>Warm intro to Lockheed's object capture center and venture arm via Meritable. White paper out.</small>
+        </div>
+      </div>
+      <div class="row">
+        <div class="date">2026.04</div>
+        <div class="status done">Logged</div>
+        <div class="body">
+          Vacuum chamber assembled and mounted.
+          <small>Garage R&amp;D moves from "concept" to "rig." Thermal cycling is the funded upgrade target.</small>
+        </div>
+      </div>
+      <div class="row">
+        <div class="date">2026.05</div>
+        <div class="status live">In Flight</div>
+        <div class="body">
+          Techstars Space + Boulder applications.
+          <small>Dual track. June 10 deadline. Framed as the LOI engine — the way the catch-22 actually breaks.</small>
+        </div>
+      </div>
+      <div class="row">
+        <div class="date">2026.05</div>
+        <div class="status live">In Flight</div>
+        <div class="body">
+          KMI conditional LOI activation.
+          <small>Most progressed customer dialogue. Branch framework in place for the next call.</small>
+        </div>
+      </div>
+      <div class="row">
+        <div class="date">Q3 2026</div>
+        <div class="status queue">Queued</div>
+        <div class="body">
+          NSF + DoD SBIR Phase I submissions.
+          <small>SAM.gov current. DSIP registered. NSF first; DoD on the next release window.</small>
+        </div>
+      </div>
+      <div class="row">
+        <div class="date">2027</div>
+        <div class="status queue">Queued</div>
+        <div class="body">
+          Mission 0 — first foam-in-vacuum demonstration on orbit.
+          <small>The flight that turns a thesis into heritage.</small>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- THE PACT -->
+  <section>
+    <div class="sec-head">
+      <div class="sec-tag">§ 04 / The Pact</div>
+      <h2 class="sec-title">The <em>Operator's Pact.</em></h2>
+    </div>
+
+    <div class="pact">
+      <p class="lead">
+        There are roughly thirty-seven thousand objects in low Earth orbit
+        large enough to be tracked, and the great majority of them are
+        tumbling, irregular, uncooperative, and impossible to grab. Every
+        company in this market has been quietly assuming someone else
+        would solve that — that the targets would magically arrive
+        already stabilized, already characterized, already willing.
+        They will not.
+      </p>
+      <p>
+        Pre-stabilization is the unsolved dependency. It is the part of
+        the value chain that nobody has demonstrated, because demonstrating
+        it is hard, and because the people with the capital have been
+        looking elsewhere — at autonomy, at AI, at software eating the
+        physical world. The physical world is still there. It still
+        tumbles. It still has mass.
+      </p>
+      <p>
+        Delta Infinite is a physical-systems company solving a
+        physical-systems problem. We are building the foam interface —
+        the thing that meets a tumbling object on its own terms and makes
+        it tractable for everything that comes after. Capture, repair,
+        deorbit, recycle, refuel, mine. None of it works without this
+        layer. This layer is the unlock.
+      </p>
+      <p>
+        The plan is unromantic and stubborn. License what we build to the
+        operators near term, generate the heritage and the revenue, and
+        use that runway to become an operator ourselves on the timeline
+        that matters — cislunar, water, depots, the trillion-dollar
+        infrastructure that follows. There is a long walk between here
+        and there. We've been walking it since 2012.
+      </p>
+      <p>
+        You are part of this now. Not symbolically. The merchandise was
+        the credential, and you wore it before there was a reason to.
+        That mattered. That continues to matter. When a mission flies,
+        you'll have been here.
+      </p>
+      <div class="sigline">
+        <span>— Kai Cahlil, Founder</span>
+        <span>Delta Infinite · 2026</span>
+      </div>
+    </div>
+  </section>
+
+  <footer class="foot">
+    <div>
+      End of console. <span style="color:var(--ink-3)">Press</span>
+      <span style="color:var(--phosphor)">Shift + T</span>
+      <span style="color:var(--ink-3)">to open the transmission queue.</span>
+    </div>
+    <div>
+      <a href="mailto:kai@deltainfinite.com">kai@deltainfinite.com</a>
+    </div>
+  </footer>
+
+</div>
+
+<!-- transmission queue (easter egg) -->
+<div class="qmodal" id="qmodal">
+  <div class="panel">
+    <h3>// Transmission Queue</h3>
+    <p>
+      &gt; You found this. Good. It's empty for now — that's the point.
+      Every Operator gets one signal a quarter, sent only to this channel.
+      The first one drops when the next milestone does. No newsletters.
+      No drip campaigns. Real signal.
+    </p>
+    <p style="color:var(--phosphor-dim)">
+      &gt; Standby.
+    </p>
+    <button class="btn" id="qclose">Close</button>
+  </div>
+</div>
+
+<div class="toast" id="toast">// LOG ENTRY</div>
+
+<script>
+  // ------ Boot sequence ------
+  const lines = [
+    { id: "bl1", text: "&gt; init operator-console v1.0",   delay: 60 },
+    { id: "bl2", text: "&gt; channel: capture-ladder",       delay: 80 },
+    { id: "bl3", text: "&gt; auth: <span class='ok'>OK</span>", delay: 100 },
+    { id: "bl4", text: "&gt; clearance: <span class='ok'>FOUNDING-OPERATOR</span>", delay: 120 },
+    { id: "bl5", text: "&gt; ", delay: 100 }
+  ];
+  function bootType(){
+    let t = 0;
+    lines.forEach(L => {
+      t += L.delay;
+      setTimeout(() => { document.getElementById(L.id).innerHTML = L.text; }, t);
+    });
+    setTimeout(() => {
+      document.getElementById("boot").classList.add("gone");
+      document.querySelectorAll(".reveal").forEach((el, i) => {
+        setTimeout(() => el.classList.add("in"), 80 + i*120);
+      });
+      runCounters();
+    }, t + 700);
+  }
+
+  // ------ UTC clock ------
+  function tick(){
+    const d = new Date();
+    const pad = n => String(n).padStart(2,"0");
+    document.getElementById("utc").textContent =
+      pad(d.getUTCHours())+":"+pad(d.getUTCMinutes())+":"+pad(d.getUTCSeconds())+" Z";
+  }
+  setInterval(tick, 1000); tick();
+
+  // ------ Days since founding (founded 2022; using Jan 1 2022 as a stable anchor) ------
+  const founded = new Date("2022-01-01T00:00:00Z");
+  document.getElementById("daysSinceFounded").textContent =
+    Math.floor((Date.now() - founded.getTime()) / 86400000).toLocaleString();
+
+  // ------ Animated counters + slow live tick on the debris number ------
+  function runCounters(){
+    document.querySelectorAll("[data-counter]").forEach(el => {
+      const target = parseInt(el.dataset.target, 10);
+      const suffix = el.dataset.suffix || "";
+      const dur = 1600;
+      const start = performance.now();
+      function frame(now){
+        const t = Math.min(1, (now - start)/dur);
+        const eased = 1 - Math.pow(1 - t, 3);
+        const v = Math.floor(eased * target);
+        el.textContent = v.toLocaleString() + suffix;
+        if (t < 1) requestAnimationFrame(frame);
+        else if (el.dataset.tick === "1") liveTick(el, suffix);
+      }
+      requestAnimationFrame(frame);
+    });
+  }
+  function liveTick(el, suffix){
+    let v = parseInt(el.textContent.replace(/[^\d]/g, ""), 10);
+    setInterval(() => {
+      // ~1 added every 12-25 seconds — feels alive without being silly
+      if (Math.random() < 0.08) {
+        v += 1;
+        el.textContent = v.toLocaleString() + suffix;
+      }
+    }, 1500);
+  }
+
+  // ------ Operator ID provisioning ------
+  const STORAGE_KEY = "di-fo-operator-v1";
+  const cs = document.getElementById("callsign");
+  const provisionBtn = document.getElementById("provision");
+  const downloadBtn = document.getElementById("download");
+  const resetBtn = document.getElementById("reset");
+  const cardCallsign = document.getElementById("card-callsign");
+  const cardSerial   = document.getElementById("card-serial");
+  const cardDate     = document.getElementById("card-date");
+  const card         = document.getElementById("card");
+
+  function fnv1a(str){
+    let h = 0x811c9dc5;
+    for (let i = 0; i < str.length; i++){
+      h ^= str.charCodeAt(i);
+      h = (h + ((h<<1)+(h<<4)+(h<<7)+(h<<8)+(h<<24))) >>> 0;
+    }
+    return h.toString(16).toUpperCase().padStart(8, "0");
+  }
+  function dayOfYear(d){
+    const start = new Date(Date.UTC(d.getUTCFullYear(), 0, 0));
+    return Math.floor((d - start) / 86400000);
+  }
+  function formatSerial(callsign, date){
+    const yyyy = date.getUTCFullYear();
+    const ddd  = String(dayOfYear(date)).padStart(3, "0");
+    const hash = fnv1a(callsign + "|" + yyyy + "|" + ddd).slice(0, 6);
+    return `DI-FO-${yyyy}.${ddd}-${hash}`;
+  }
+  function formatDate(d){
+    const yyyy = d.getUTCFullYear();
+    const mm = String(d.getUTCMonth()+1).padStart(2,"0");
+    const dd = String(d.getUTCDate()).padStart(2,"0");
+    return `${yyyy}.${mm}.${dd}`;
+  }
+
+  function paintCard(callsign, serial, date){
+    cardCallsign.textContent = callsign || "— — —";
+    cardSerial.textContent = serial || "DI-FO-————.———-——————";
+    cardDate.textContent = date || "— —";
+  }
+  function loadOp(){
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (!raw) return null;
+      return JSON.parse(raw);
+    } catch(e) { return null; }
+  }
+  function saveOp(op){ localStorage.setItem(STORAGE_KEY, JSON.stringify(op)); }
+
+  function refreshButtons(hasOp){
+    provisionBtn.disabled = hasOp;
+    provisionBtn.textContent = hasOp ? "Provisioned" : "Provision";
+    downloadBtn.disabled = !hasOp;
+    resetBtn.disabled = !hasOp;
+    cs.disabled = hasOp;
+  }
+
+  function showToast(msg){
+    const t = document.getElementById("toast");
+    t.textContent = msg;
+    t.classList.add("show");
+    clearTimeout(t._tid);
+    t._tid = setTimeout(()=>t.classList.remove("show"), 2200);
+  }
+
+  // boot existing op
+  (function init(){
+    const op = loadOp();
+    if (op){
+      cs.value = op.callsign;
+      paintCard(op.callsign, op.serial, op.date);
+      refreshButtons(true);
+    } else {
+      refreshButtons(false);
+    }
+  })();
+
+  // live preview while typing
+  cs.addEventListener("input", () => {
+    cs.value = cs.value.toUpperCase().replace(/[^A-Z0-9-]/g, "").slice(0, 18);
+    if (!loadOp()){
+      cardCallsign.textContent = cs.value || "— — —";
+    }
+  });
+
+  provisionBtn.addEventListener("click", () => {
+    const callsign = cs.value.trim();
+    if (!callsign || callsign.length < 3){
+      showToast("// CALLSIGN TOO SHORT");
+      cs.focus();
+      return;
+    }
+    const now = new Date();
+    const op = {
+      callsign,
+      serial: formatSerial(callsign, now),
+      date: formatDate(now),
+      timestamp: now.toISOString()
+    };
+    saveOp(op);
+    paintCard(op.callsign, op.serial, op.date);
+    refreshButtons(true);
+    // little flair
+    card.style.transform = "rotateY(360deg)";
+    setTimeout(()=> card.style.transform = "", 800);
+    showToast("// OPERATOR PROVISIONED");
+  });
+
+  resetBtn.addEventListener("click", () => {
+    if (!confirm("Clear your local Operator record? You can re-provision with the same or a different callsign.")) return;
+    localStorage.removeItem(STORAGE_KEY);
+    cs.value = "";
+    paintCard("", "", "");
+    refreshButtons(false);
+    showToast("// RECORD CLEARED");
+  });
+
+  // ------ Card → PNG download ------
+  downloadBtn.addEventListener("click", async () => {
+    const op = loadOp();
+    if (!op) return;
+    const url = await renderCardPNG(op);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `delta-infinite-operator-${op.callsign}.png`;
+    document.body.appendChild(a); a.click(); a.remove();
+    showToast("// CARD DOWNLOADED");
+  });
+
+  // Render the card to canvas at 2x credit-card pixel density (no html2canvas dep)
+  function renderCardPNG(op){
+    return new Promise((resolve) => {
+      const W = 1600, H = Math.round(1600 / 1.586);
+      const c = document.createElement("canvas");
+      c.width = W; c.height = H;
+      const g = c.getContext("2d");
+
+      // bg
+      const grad = g.createLinearGradient(0, 0, W, H);
+      grad.addColorStop(0, "#14171c");
+      grad.addColorStop(0.6, "#0e1114");
+      grad.addColorStop(1, "#11161a");
+      g.fillStyle = grad;
+      g.fillRect(0, 0, W, H);
+
+      // phosphor wash
+      const rg = g.createRadialGradient(W*0.9, 0, 0, W*0.9, 0, W*0.6);
+      rg.addColorStop(0, "rgba(182,244,200,0.10)");
+      rg.addColorStop(1, "rgba(182,244,200,0)");
+      g.fillStyle = rg;
+      g.fillRect(0,0,W,H);
+
+      // scanlines
+      g.fillStyle = "rgba(255,255,255,0.012)";
+      for (let y = 0; y < H; y += 4){ g.fillRect(0, y, W, 1); }
+
+      // border
+      g.strokeStyle = "#2a313b";
+      g.lineWidth = 2;
+      g.strokeRect(8, 8, W-16, H-16);
+
+      // glyph
+      g.save();
+      g.globalAlpha = 0.06;
+      g.strokeStyle = "#b6f4c8";
+      g.lineWidth = 2;
+      const cx = W - 200, cy = H - 200, r1 = 240, r2 = 160;
+      g.beginPath(); g.arc(cx, cy, r1, 0, Math.PI*2); g.stroke();
+      g.beginPath(); g.arc(cx, cy, r2, 0, Math.PI*2); g.stroke();
+      // triangle
+      g.beginPath();
+      g.moveTo(cx, cy - r1);
+      g.lineTo(cx + r1*0.95, cy + r1*0.6);
+      g.lineTo(cx - r1*0.95, cy + r1*0.6);
+      g.closePath();
+      g.stroke();
+      g.fillStyle = "#b6f4c8";
+      g.beginPath(); g.arc(cx, cy + 20, 14, 0, Math.PI*2); g.fill();
+      g.restore();
+
+      // header
+      g.font = "500 22px 'JetBrains Mono', monospace";
+      g.fillStyle = "#6e6a62";
+      g.textBaseline = "top";
+      g.fillText("DELTA INFINITE", 60, 56);
+      const rh = "FOUNDING OPERATOR · CLASS OF 2026";
+      g.textAlign = "right";
+      g.fillText(rh, W - 60, 56);
+      g.textAlign = "left";
+
+      // title
+      g.fillStyle = "#e8e6df";
+      g.font = "320 88px 'Fraunces', Georgia, serif";
+      const titleY = 160;
+      g.fillText("Founding ", 60, titleY);
+      const fwidth = g.measureText("Founding ").width;
+      g.fillStyle = "#b6f4c8";
+      g.font = "italic 320 88px 'Fraunces', Georgia, serif";
+      g.fillText("Operator.", 60 + fwidth, titleY);
+
+      // callsign
+      g.fillStyle = "#6e6a62";
+      g.font = "500 22px 'JetBrains Mono', monospace";
+      g.fillText("CALLSIGN", 60, titleY + 130);
+      g.fillStyle = "#b6f4c8";
+      g.font = "500 56px 'JetBrains Mono', monospace";
+      g.fillText(op.callsign.toUpperCase(), 60, titleY + 165);
+
+      // footer
+      const fy = H - 80;
+      g.fillStyle = "#6e6a62";
+      g.font = "500 22px 'JetBrains Mono', monospace";
+      g.fillText("PROVISIONED " + op.date, 60, fy);
+      g.textAlign = "right";
+      g.fillStyle = "#e8e6df";
+      g.font = "500 26px 'JetBrains Mono', monospace";
+      g.fillText(op.serial, W - 60, fy - 4);
+      g.textAlign = "left";
+
+      // Wait a tick to ensure font load (best-effort)
+      if (document.fonts && document.fonts.ready) {
+        document.fonts.ready.then(() => {
+          // redraw with proper fonts
+          const c2 = document.createElement("canvas");
+          c2.width = W; c2.height = H;
+          drawCard(c2.getContext("2d"), W, H, op);
+          resolve(c2.toDataURL("image/png"));
+        });
+      } else {
+        resolve(c.toDataURL("image/png"));
+      }
+    });
+  }
+  function drawCard(g, W, H, op){
+    const grad = g.createLinearGradient(0, 0, W, H);
+    grad.addColorStop(0, "#14171c");
+    grad.addColorStop(0.6, "#0e1114");
+    grad.addColorStop(1, "#11161a");
+    g.fillStyle = grad; g.fillRect(0, 0, W, H);
+
+    const rg = g.createRadialGradient(W*0.9, 0, 0, W*0.9, 0, W*0.6);
+    rg.addColorStop(0, "rgba(182,244,200,0.10)");
+    rg.addColorStop(1, "rgba(182,244,200,0)");
+    g.fillStyle = rg; g.fillRect(0,0,W,H);
+
+    g.fillStyle = "rgba(255,255,255,0.012)";
+    for (let y = 0; y < H; y += 4){ g.fillRect(0, y, W, 1); }
+
+    g.strokeStyle = "#2a313b"; g.lineWidth = 2;
+    g.strokeRect(8, 8, W-16, H-16);
+
+    g.save();
+    g.globalAlpha = 0.06;
+    g.strokeStyle = "#b6f4c8"; g.lineWidth = 2;
+    const cx = W - 200, cy = H - 200, r1 = 240, r2 = 160;
+    g.beginPath(); g.arc(cx, cy, r1, 0, Math.PI*2); g.stroke();
+    g.beginPath(); g.arc(cx, cy, r2, 0, Math.PI*2); g.stroke();
+    g.beginPath();
+    g.moveTo(cx, cy - r1);
+    g.lineTo(cx + r1*0.95, cy + r1*0.6);
+    g.lineTo(cx - r1*0.95, cy + r1*0.6);
+    g.closePath(); g.stroke();
+    g.fillStyle = "#b6f4c8";
+    g.beginPath(); g.arc(cx, cy + 20, 14, 0, Math.PI*2); g.fill();
+    g.restore();
+
+    g.font = "500 22px 'JetBrains Mono', ui-monospace, monospace";
+    g.fillStyle = "#6e6a62"; g.textBaseline = "top";
+    g.fillText("DELTA INFINITE", 60, 56);
+    g.textAlign = "right";
+    g.fillText("FOUNDING OPERATOR · CLASS OF 2026", W - 60, 56);
+    g.textAlign = "left";
+
+    g.fillStyle = "#e8e6df";
+    g.font = "320 88px 'Fraunces', Georgia, serif";
+    const titleY = 160;
+    g.fillText("Founding ", 60, titleY);
+    const fwidth = g.measureText("Founding ").width;
+    g.fillStyle = "#b6f4c8";
+    g.font = "italic 320 88px 'Fraunces', Georgia, serif";
+    g.fillText("Operator.", 60 + fwidth, titleY);
+
+    g.fillStyle = "#6e6a62";
+    g.font = "500 22px 'JetBrains Mono', monospace";
+    g.fillText("CALLSIGN", 60, titleY + 130);
+    g.fillStyle = "#b6f4c8";
+    g.font = "500 56px 'JetBrains Mono', monospace";
+    g.fillText(op.callsign.toUpperCase(), 60, titleY + 165);
+
+    const fy = H - 80;
+    g.fillStyle = "#6e6a62";
+    g.font = "500 22px 'JetBrains Mono', monospace";
+    g.fillText("PROVISIONED " + op.date, 60, fy);
+    g.textAlign = "right";
+    g.fillStyle = "#e8e6df";
+    g.font = "500 26px 'JetBrains Mono', monospace";
+    g.fillText(op.serial, W - 60, fy - 4);
+    g.textAlign = "left";
+  }
+
+  // ------ Easter egg: Shift + T opens transmission queue ------
+  document.addEventListener("keydown", (e) => {
+    if (e.shiftKey && (e.key === "T" || e.key === "t")){
+      document.getElementById("qmodal").classList.add("show");
+    }
+    if (e.key === "Escape"){
+      document.getElementById("qmodal").classList.remove("show");
+    }
+  });
+  document.getElementById("qclose").addEventListener("click", () => {
+    document.getElementById("qmodal").classList.remove("show");
+  });
+
+  // ------ Star field ------
+  (function stars(){
+    const c = document.getElementById("stars");
+    const g = c.getContext("2d");
+    let W, H, pts = [];
+    function resize(){
+      W = c.width = window.innerWidth;
+      H = c.height = window.innerHeight;
+      const n = Math.min(220, Math.floor(W*H/9000));
+      pts = [];
+      for (let i = 0; i < n; i++){
+        pts.push({
+          x: Math.random()*W, y: Math.random()*H,
+          r: Math.random()*1.2 + 0.2,
+          a: Math.random()*0.6 + 0.2,
+          s: Math.random()*0.02 + 0.005
+        });
+      }
+    }
+    function draw(t){
+      g.clearRect(0,0,W,H);
+      for (const p of pts){
+        const tw = 0.5 + 0.5*Math.sin(t*p.s + p.x);
+        g.globalAlpha = p.a * tw;
+        g.fillStyle = "#cfd8d2";
+        g.beginPath(); g.arc(p.x, p.y, p.r, 0, Math.PI*2); g.fill();
+      }
+      requestAnimationFrame(draw);
+    }
+    window.addEventListener("resize", resize);
+    resize();
+    requestAnimationFrame(draw);
+  })();
+
+  // start it
+  bootType();
+</script>
+</body>
+</html>
